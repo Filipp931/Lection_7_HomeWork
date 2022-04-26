@@ -15,44 +15,44 @@ import java.lang.reflect.InvocationTargetException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.NoSuchElementException;
 
 import static org.junit.Assert.*;
 
 /**
  * Unit test for simple App.
  */
-public class AppTest 
+public class AppTest
 {
     /**
-     * Rigorous Test :-)
+     * Проверка pluginManager на загрузку классов
      */
     @Test
-    public void PluginManagerTest()
-    {
-        PluginManager pluginManager = new PluginManager("C:\\Users\\admin\\Desktop\\HW7\\target\\classes\\pluginRootDirectory");
-        Plugin test = pluginManager.load("HelloPlugin", "HelloPlugin.class");
-        Plugin test2 = pluginManager.load("HelloPlugin", "HelloPlugin.class");
+    public void PluginManagerTest() throws NoSuchMethodException, InstantiationException, IllegalAccessException, IOException, InvocationTargetException, NoSuchElementException {
+        PluginManager pluginManager = new PluginManager("target\\classes\\pluginRootDirectory");
+        Plugin test = pluginManager.load("HelloPlugin", "HelloPlugin");
+        Plugin test2 = pluginManager.load("HelloPlugin", "HelloPlugin");
+        Plugin test3 = pluginManager.load("RandomPlugin", "RandomPlugin");
+        Plugin test4 = pluginManager.load("RandomPlugin", "RandomPlugin");
+        Plugin test5 = pluginManager.load("NotPlugin", "NotPlugin");
         assertEquals(test.getClass().getInterfaces()[0], Plugin.class);
     }
 
     @After
     public void deleteCash() throws IOException {
-        Files.delete(Path.of("temp.txt"));
+        if (Files.exists(Path.of("temp.txt"))) {
+            Files.delete(Path.of("temp.txt"));
+        }
     }
     @Test
-    public void cryptTest() throws IOException, ClassNotFoundException {
+    public void cryptTest() throws IOException {
         Plugin test = new HelloPlugin();
         Files.createFile(Path.of("temp.txt"));
-        Path pathToOrigin = Paths.get("C:\\Users\\admin\\Desktop\\HW7\\target\\classes\\pluginRootDirectory\\HelloPlugin\\HelloPlugin.class");
+        Path pathToOrigin = Paths.get("C:\\Users\\Fil\\Desktop\\JavaSber\\Lection_7_HomeWork\\Lection_7_HomeWork\\target\\classes\\pluginRootDirectory\\HelloPlugin\\HelloPlugin.class");
         Path pathToCryptFile = Paths.get("temp.txt");
-        byte[] origin = Files.readAllBytes(pathToOrigin);
-        try(BufferedWriter bw = Files.newBufferedWriter(pathToCryptFile)){
-            for (byte b:origin) {
-                bw.write(EncryptedClassLoader.crypt(b,"key"));
-            }
-        }
+        EncryptedClassLoader.encrypt(pathToOrigin,pathToCryptFile,"key");
         EncryptedClassLoader encryptedClassLoader = new EncryptedClassLoader("key",
-                new File("C:\\Users\\admin\\Desktop\\HW7\\target\\classes\\pluginRootDirectory"), ClassLoader.getSystemClassLoader() );
+                new File("target\\classes\\pluginRootDirectory"), ClassLoader.getSystemClassLoader() );
         Class clazz = encryptedClassLoader.findClass("HelloPlugin");
         assertTrue(clazz.getInterfaces()[0] == test.getClass().getInterfaces()[0]);
     }
