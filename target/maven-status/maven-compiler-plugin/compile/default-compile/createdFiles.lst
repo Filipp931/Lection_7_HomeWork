@@ -1,0 +1,6 @@
+org\example\PluginManager.class
+pluginRootDirectory\HelloPlugin\HelloPlugin.class
+org\example\App.class
+pluginRootDirectory\RandomPlugin\RandomPlugin.class
+org\example\loaders\EncryptedClassLoader.class
+org\example\loaders\MyClassLoader.class
