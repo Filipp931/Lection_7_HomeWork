@@ -2,11 +2,11 @@ package org.example.loaders;
 
 import org.apache.commons.codec.BinaryDecoder;
 import org.apache.commons.codec.binary.Base16;
+import org.example.loaders.exceptions.NoClassException;
+import org.w3c.dom.ls.LSOutput;
 
 import javax.net.ssl.SSLContext;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -26,14 +26,16 @@ public class EncryptedClassLoader extends ClassLoader{
 
     @Override
     public Class<?> findClass(String name) {
-        Class<?> clazz = null;
+        String classFilePath;
         try {
-            String classFilePath = findClassFilePath(dir, name);
-            byte[] decryptedBinaryData = getBinaryClassData(classFilePath);
-            clazz = super.defineClass(null,decryptedBinaryData,0,decryptedBinaryData.length);
-        } catch (Exception e){
+            classFilePath = findClassFilePath(dir, name);
+        } catch (Exception e) {
             e.printStackTrace();
+            return null;
         }
+        byte[] decryptedBinaryData;
+        decryptedBinaryData = getBinaryClassData(classFilePath);
+        Class<?> clazz = super.defineClass(null,decryptedBinaryData,0,decryptedBinaryData.length);
         return clazz;
     }
 
@@ -45,12 +47,14 @@ public class EncryptedClassLoader extends ClassLoader{
      * @return String путь к файлу
      * @throws FileNotFoundException если файла .class нет в директории
      */
-    private String findClassFilePath(File directory, String pluginClassName) throws IOException {
-        Path path = Files.walk(Paths.get(directory.getAbsolutePath()))
+    private String findClassFilePath(File directory, String pluginClassName) throws IOException, NoClassException {
+        List<Path> files = Files.walk(Paths.get(directory.getAbsolutePath()))
                 .filter(file -> file.endsWith(pluginClassName + ".class"))
-                .findFirst()
-                .get();
-        return String.valueOf(path);
+                .collect(Collectors.toList());
+        if(files.isEmpty()) {
+            throw new NoClassException();
+        }
+        return String.valueOf(files.get(0));
     }
     /**
      * Получение бинарного массива данных из файла по его пути
@@ -64,15 +68,31 @@ public class EncryptedClassLoader extends ClassLoader{
         } catch (IOException e) {
             e.printStackTrace();
         }
-        return data;
+        return decrypt(data);
+    }
+    private byte[] decrypt(byte[] crypt) {
+        byte[] byteKey = key.getBytes(); //-128 до 127
+        byte[] result = new byte[crypt.length - byteKey.length];
+        for (int i = 0; i < result.length; i++) {
+            result[i] = crypt[i];
+        }
+        return result;
     }
     public static void encrypt(Path file, Path cryptFile, String key) throws IOException {
         byte[] content = Files.readAllBytes(file);
-        //TODO
+        byte[] byteKey = key.getBytes(); //-128 до 127
+        byte[] result = new byte[content.length + byteKey.length];
+        for (int i = 0; i < content.length; i++) {
+            result[i] = content[i];
+        }
+        for (int i = 0; i < byteKey.length ; i++) {
+            int current = content.length + i;
+            result[current] = byteKey[i];
+        }
         if(Files.exists(cryptFile)){
             Files.delete(cryptFile);
         }
-        Files.write(cryptFile,content);
+        Files.write(cryptFile, result);
     }
 
 }

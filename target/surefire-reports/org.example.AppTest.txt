@@ -1,8 +1,0 @@
--------------------------------------------------------------------------------
-Test set: org.example.AppTest
--------------------------------------------------------------------------------
-Tests run: 2, Failures: 0, Errors: 1, Skipped: 0, Time elapsed: 0.05 s <<< FAILURE! - in org.example.AppTest
-cryptTest(org.example.AppTest)  Time elapsed: 0.005 s  <<< ERROR!
-java.nio.file.NoSuchFileException: C:\Users\admin\Desktop\HW7\target\classes\pluginRootDirectory\HelloPlugin\HelloPlugin.class
-	at org.example.AppTest.cryptTest(AppTest.java:52)
-

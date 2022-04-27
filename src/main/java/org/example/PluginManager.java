@@ -1,6 +1,8 @@
 package org.example;
 
+import org.example.loaders.exceptions.ClassIsNotPluginException;
 import org.example.loaders.MyClassLoader;
+import org.example.loaders.exceptions.NoClassException;
 import pluginRootDirectory.Plugin;
 
 import java.io.File;
@@ -12,12 +14,14 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.stream.Collectors;
 
 public class PluginManager {
     private final String pluginRootDirectory;
     private HashMap<String, Class<?>> cache = new HashMap<>();
-    private MyClassLoader myClassLoader = new MyClassLoader();
+    private final MyClassLoader myClassLoader = new MyClassLoader();
     public PluginManager(String pluginRootDirectory) {
         this.pluginRootDirectory = pluginRootDirectory;
     }
@@ -28,7 +32,7 @@ public class PluginManager {
      * @param pluginClassName - класс плагина
      * @return Plugin
      */
-    public Plugin load(String pluginName, String pluginClassName) throws InvocationTargetException, NoSuchMethodException, InstantiationException, IllegalAccessException, IOException {
+    public Plugin load(String pluginName, String pluginClassName) throws InvocationTargetException, NoSuchMethodException, InstantiationException, IllegalAccessException, IOException, NoClassException, ClassIsNotPluginException {
         if(cache.containsKey(pluginName)){
             return loadPluginFromCache(pluginName);
         } else {
@@ -62,7 +66,7 @@ public class PluginManager {
      * @throws InvocationTargetException
      * @throws InstantiationException
      */
-    private Plugin loadPluginFromFileAndCache(String pluginName, String pluginClassName) throws IOException, NoSuchMethodException, IllegalAccessException, InvocationTargetException, InstantiationException, NoSuchElementException {
+    private Plugin loadPluginFromFileAndCache(String pluginName, String pluginClassName) throws IOException, NoSuchMethodException, IllegalAccessException, InvocationTargetException, InstantiationException, NoSuchElementException, NoClassException, ClassIsNotPluginException {
         String classFilePath = findClassFilePath(new File(pluginRootDirectory), pluginClassName);
         byte[] binaryClassData = getBinaryClassData(classFilePath);
         Class clazz = myClassLoader.load(binaryClassData);
@@ -72,7 +76,7 @@ public class PluginManager {
             System.out.println("===== class " + clazz.getSimpleName() + " loaded from file and added to the cache  ========");
             plugin = (Plugin) clazz.getConstructor().newInstance();
         } else {
-            System.err.println("===== class " + clazz.getSimpleName() + " is not Plugin!  ========");
+            throw new ClassIsNotPluginException();
         }
         return plugin;
     }
@@ -84,12 +88,14 @@ public class PluginManager {
      * @return String путь к файлу
      * @throws FileNotFoundException если файла .class нет в директории
      */
-    private String findClassFilePath(File directory, String pluginClassName) throws IOException {
-        Path path = Files.walk(Paths.get(directory.getAbsolutePath()))
+    private String findClassFilePath(File directory, String pluginClassName) throws IOException, NoClassException {
+        List<Path> files = Files.walk(Paths.get(directory.getAbsolutePath()))
                 .filter(file -> file.endsWith(pluginClassName + ".class"))
-                .findFirst()
-                .get();
-        return String.valueOf(path);
+                .collect(Collectors.toList());
+        if(files.isEmpty()) {
+            throw new NoClassException();
+        }
+        return String.valueOf(files.get(0));
     }
     /**
      * Получение бинарного массива данных из файла по его пути
